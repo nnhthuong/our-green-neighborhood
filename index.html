@@ -15,7 +15,9 @@
   .chip.green { background: #2e7d52; color: #fff; }
   #goal { padding: 8px 18px; background: #fff7dd; border-bottom: 2px solid #e3cf8a; font-size: 15px; }
   #wrap { display: flex; gap: 14px; padding: 14px 18px; align-items: flex-start; }
-  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 26px; padding: 14px; position: relative; overflow: hidden; }
+  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 26px; padding: 56px; position: relative; overflow: hidden; }
+  .ring { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
+  .dashring { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
   #conns { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .connV { position: absolute; top: 0; bottom: 0; width: 48px; background: #5b6670; }
   .connV::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 3px dashed #ffd94d; }
@@ -92,6 +94,8 @@
   Nhà cần <b>3 đồ + 2 công</b> · Khu dùng chung cần <b>4 đồ + 3 công</b>. &nbsp;|&nbsp; Chỉ số xanh = nhà ×8 + khu chung ×11 + vòng xe tham quan đầu tiên ×8.</div>
 <div id="wrap">
   <div id="scene">
+    <div class="ring"></div>
+    <div class="dashring"></div>
     <div id="conns"></div>
     <div id="block"></div>
     <div id="segs"></div>
@@ -125,7 +129,7 @@
         <button id="btnCar" onclick="tourCar()">▶ Chạy tham quan</button>
         <button class="drvBtn" onclick="stepDrive(1)">Tiến ➡</button>
         <label>Tốc độ: <select id="speed"><option value="9000">Chậm · 10 km/h</option><option value="6000" selected>Vừa · 18 km/h</option><option value="3500">Nhanh · 30 km/h</option></select></label>
-        <span id="carInfo">Xe đang đỗ ở cuối đường dọc đầu tiên. Bấm vào đoạn đường trước một ô nhà hoặc khu dùng chung để xe chạy tới đó — xe tự tìm đường qua các đường dọc, đường ngang trong khu.</span>
+        <span id="carInfo">Xe đang đỗ ở cuối đường dọc đầu tiên. Bấm vào đoạn đường trước một ô nhà hoặc khu dùng chung để xe chạy tới đó — xe tự tìm đường qua các đường trong khu và cả vòng ngoài.</span>
       </div>
     </div>
     <div id="toast"></div>
@@ -264,6 +268,38 @@ function measureStreets() {
   STREET.iL = b.l + 26; STREET.iR = b.r - 26; STREET.iT = b.t + 26; STREET.iB = b.b - 26;
   var scene = document.getElementById("scene");
   STREET.W = scene.clientWidth; STREET.H = scene.clientHeight;
+  var r = 26;
+  var g = { x0: 21, y0: 21, x1: STREET.W - 21, y1: STREET.H - 21, r: r };
+  g.Lb = (g.x1 - r) - (g.x0 + r); g.Lv = (g.y1 - r) - (g.y0 + r); g.arc = Math.PI * r / 2;
+  g.total = 2 * (g.Lb + g.Lv) + 4 * g.arc;
+  STREET.ring = g;
+}
+function ringPointAt(d, g) {
+  g = g || STREET.ring;
+  d = ((d % g.total) + g.total) % g.total;
+  var segs = [
+    { len: g.Lb, p: function (s) { return { x: g.x0 + g.r + s, y: g.y1 }; } },
+    { len: g.arc, p: function (s) { var a = Math.PI / 2 - s / g.r; return { x: g.x1 - g.r + g.r * Math.cos(a), y: g.y1 - g.r + g.r * Math.sin(a) }; } },
+    { len: g.Lv, p: function (s) { return { x: g.x1, y: g.y1 - g.r - s }; } },
+    { len: g.arc, p: function (s) { var a = 0 - s / g.r; return { x: g.x1 - g.r + g.r * Math.cos(a), y: g.y0 + g.r + g.r * Math.sin(a) }; } },
+    { len: g.Lb, p: function (s) { return { x: g.x1 - g.r - s, y: g.y0 }; } },
+    { len: g.arc, p: function (s) { var a = -Math.PI / 2 - s / g.r; return { x: g.x0 + g.r + g.r * Math.cos(a), y: g.y0 + g.r + g.r * Math.sin(a) }; } },
+    { len: g.Lv, p: function (s) { return { x: g.x0, y: g.y0 + g.r + s }; } },
+    { len: g.arc, p: function (s) { var a = Math.PI - s / g.r; return { x: g.x0 + g.r + g.r * Math.cos(a), y: g.y1 - g.r + g.r * Math.sin(a) }; } }
+  ];
+  for (var i = 0; i < segs.length; i++) {
+    if (d <= segs[i].len) return segs[i].p(d);
+    d -= segs[i].len;
+  }
+  return segs[0].p(0);
+}
+function ringD(p, g) {
+  g = g || STREET.ring;
+  if (Math.abs(p.y - g.y1) < 2 && p.x >= g.x0 + g.r - 2 && p.x <= g.x1 - g.r + 2) return p.x - (g.x0 + g.r);
+  if (Math.abs(p.x - g.x1) < 2 && p.y <= g.y1 - g.r + 2 && p.y >= g.y0 + g.r - 2) return g.Lb + g.arc + ((g.y1 - g.r) - p.y);
+  if (Math.abs(p.y - g.y0) < 2 && p.x <= g.x1 - g.r + 2 && p.x >= g.x0 + g.r - 2) return g.Lb + g.arc + g.Lv + g.arc + ((g.x1 - g.r) - p.x);
+  if (Math.abs(p.x - g.x0) < 2 && p.y >= g.y0 + g.r - 2 && p.y <= g.y1 - g.r + 2) return g.Lb + g.arc + g.Lv + g.arc + g.Lb + g.arc + (p.y - (g.y0 + g.r));
+  return null;
 }
 function nkey(x, y) { return Math.round(x) + "," + Math.round(y); }
 function buildGraph(extra) {
@@ -272,18 +308,33 @@ function buildGraph(extra) {
   function link(a, b) { if (a !== b && adj[a].indexOf(b) < 0) { adj[a].push(b); adj[b].push(a); } }
   var lines = [];
   STREET.vx.forEach(function (x) {
-    var ys = [STREET.iT, STREET.hy[0], STREET.hy[1], STREET.iB];
+    var ys = [STREET.ring.y0, STREET.hy[0], STREET.hy[1], STREET.ring.y1];
     extra.forEach(function (p) { if (Math.abs(p.x - x) < 2) ys.push(p.y); });
     ys.sort(function (a, b) { return a - b; });
     lines.push(ys.map(function (y) { return node(x, y); }));
   });
   STREET.hy.forEach(function (y) {
-    var xs = [STREET.iL, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.iR];
+    var xs = [STREET.ring.x0, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.ring.x1];
     extra.forEach(function (p) { if (Math.abs(p.y - y) < 2) xs.push(p.x); });
     xs.sort(function (a, b) { return a - b; });
     lines.push(xs.map(function (x) { return node(x, y); }));
   });
   lines.forEach(function (ks) { for (var i = 0; i + 1 < ks.length; i++) link(ks[i], ks[i + 1]); });
+  // Vòng ngoài: nối các điểm mốc + điểm giao với đường trong thành vòng kín
+  [STREET.ring].forEach(function (g2) {
+    var ds = [0], cum = 0;
+    [g2.Lb, g2.arc, g2.Lv, g2.arc, g2.Lb, g2.arc, g2.Lv, g2.arc].forEach(function (L, idx) {
+      if (idx % 2 === 1) ds.push(cum + L / 2);
+      cum += L;
+      if (idx < 7) ds.push(cum);
+    });
+    STREET.vx.forEach(function (x) { ds.push(ringD({ x: x, y: g2.y1 }, g2)); ds.push(ringD({ x: x, y: g2.y0 }, g2)); });
+    STREET.hy.forEach(function (y) { ds.push(ringD({ x: g2.x1, y: y }, g2)); ds.push(ringD({ x: g2.x0, y: y }, g2)); });
+    extra.forEach(function (p) { var d = ringD(p, g2); if (d !== null) ds.push(d); });
+    ds = ds.filter(function (d) { return d !== null && d >= 0; }).sort(function (a, b) { return a - b; });
+    var ringKeys = ds.map(function (d) { var pt = ringPointAt(d, g2); return node(pt.x, pt.y); });
+    for (var ri = 0; ri < ringKeys.length; ri++) link(ringKeys[ri], ringKeys[(ri + 1) % ringKeys.length]);
+  });
   return { nodes: nodes, adj: adj };
 }
 function route(from, to) {
@@ -368,13 +419,14 @@ function stepDrive(dir) {
 }
 function tourCar() {
   if (st.carRun) return;
-  var vx = STREET.vx, hy = STREET.hy, L = STREET.iL, R = STREET.iR, T = STREET.iT, B = STREET.iB;
+  var g = STREET.ring, vx = STREET.vx, hy = STREET.hy;
   var W = [
-    { x: vx[0], y: T }, { x: vx[0], y: B }, { x: vx[2], y: B }, { x: vx[2], y: T },
-    { x: vx[1], y: T }, { x: vx[1], y: B }, { x: R, y: hy[0] }, { x: L, y: hy[0] },
-    { x: L, y: hy[1] }, { x: R, y: hy[1] }
+    { x: vx[0], y: g.y0 }, { x: vx[2], y: g.y0 }, { x: vx[2], y: g.y1 }, { x: vx[1], y: g.y1 },
+    { x: vx[1], y: g.y0 }, { x: g.x1, y: g.y0 + g.r }, { x: g.x1, y: hy[0] }, { x: g.x0, y: hy[0] },
+    { x: g.x0 + g.r, y: g.y0 }, { x: g.x0, y: hy[1] }, { x: g.x1, y: hy[1] }, { x: g.x1, y: g.y1 - g.r },
+    { x: vx[0], y: g.y1 }
   ];
-  document.getElementById("carInfo").textContent = "Xe đang chạy hết các đường trong khu phố… tốc độ " + kmhNow() + " km/h";
+  document.getElementById("carInfo").textContent = "Xe đang chạy hết các đường trong khu phố, cả vòng ngoài… tốc độ " + kmhNow() + " km/h";
   var pts = route(carState.pos, W[0]);
   for (var i = 0; i + 1 < W.length; i++) pts = pts.concat(route(W[i], W[i + 1]).slice(1));
   pts = pts.concat(route(W[W.length - 1], carState.pos).slice(1));
@@ -391,13 +443,11 @@ function buildSegs() {
   STREET.vx.forEach(function (x) {
     var d = document.createElement("div"); d.className = "connV";
     d.style.left = (x - 24) + "px";
-    d.style.top = STREET.T + "px"; d.style.height = (STREET.B - STREET.T) + "px"; d.style.bottom = "auto";
     conns.appendChild(d);
   });
   STREET.hy.forEach(function (y) {
     var d = document.createElement("div"); d.className = "connH";
     d.style.top = (y - 24) + "px";
-    d.style.left = STREET.L + "px"; d.style.width = (STREET.R - STREET.L) + "px"; d.style.right = "auto";
     conns.appendChild(d);
   });
   var box = document.getElementById("segs");
