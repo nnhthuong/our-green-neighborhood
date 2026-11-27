@@ -423,6 +423,7 @@ function buildSegs() {
         streetCells[tr + "," + tc] = cell;
       } else if (isPlotCol) {
         cell = document.createElement("div"); cell.className = "streetH";
+        streetCells[tr + "," + tc] = cell;
       } else {
         cell = document.createElement("div"); cell.className = "cross";
       }
