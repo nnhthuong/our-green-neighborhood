@@ -15,9 +15,11 @@
   .chip.green { background: #2e7d52; color: #fff; }
   #goal { padding: 8px 18px; background: #fff7dd; border-bottom: 2px solid #e3cf8a; font-size: 15px; }
   #wrap { display: flex; gap: 14px; padding: 14px 18px; align-items: flex-start; }
-  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 14px; padding: 56px; position: relative; }
-  .ring { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
-  .dashring { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
+  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 14px; padding: 116px; position: relative; }
+  .ring { position: absolute; inset: 64px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
+  .dashring { position: absolute; inset: 81px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
+  .ring2 { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
+  .dashring2 { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
   #block { display: grid; grid-template-columns: 1fr 48px 1fr 48px 1fr 48px 1fr; grid-template-rows: 1fr 48px 1fr 48px 1.5fr; height: 600px; position: relative; z-index: 1; }
   .streetV { background: #5b6670; position: relative; border-radius: 4px; }
   .streetV::before { content: ""; position: absolute; top: 4px; bottom: 4px; left: 50%; border-left: 3px dashed #ffd94d; }
@@ -89,6 +91,8 @@
   Nhà cần <b>3 đồ + 2 công</b> · Khu dùng chung cần <b>4 đồ + 3 công</b>. &nbsp;|&nbsp; Chỉ số xanh = nhà ×8 + khu chung ×11 + vòng xe tham quan đầu tiên ×8.</div>
 <div id="wrap">
   <div id="scene">
+    <div class="ring2"></div>
+    <div class="dashring2"></div>
     <div class="ring"></div>
     <div class="dashring"></div>
     <div id="block"></div>
@@ -260,14 +264,18 @@ function measureStreets() {
   var b = rectInScene(document.getElementById("block"));
   STREET.L = b.l; STREET.R = b.r; STREET.T = b.t; STREET.B = b.b;
   var scene = document.getElementById("scene");
-  var W = scene.clientWidth, H = scene.clientHeight, r = 26;
-  var g = { x0: 21, y0: 21, x1: W - 21, y1: H - 21, r: r };
-  g.Lb = (g.x1 - r) - (g.x0 + r); g.Lv = (g.y1 - r) - (g.y0 + r); g.arc = Math.PI * r / 2;
-  g.total = 2 * (g.Lb + g.Lv) + 4 * g.arc;
-  STREET.ring = g;
+  var W = scene.clientWidth, H = scene.clientHeight;
+  function makeRing(c) {
+    var g = { x0: c, y0: c, x1: W - c, y1: H - c, r: 26 };
+    g.Lb = (g.x1 - g.r) - (g.x0 + g.r); g.Lv = (g.y1 - g.r) - (g.y0 + g.r); g.arc = Math.PI * g.r / 2;
+    g.total = 2 * (g.Lb + g.Lv) + 4 * g.arc;
+    return g;
+  }
+  STREET.ring = makeRing(81);
+  STREET.ring2 = makeRing(21);
 }
-function ringPointAt(d) {
-  var g = STREET.ring;
+function ringPointAt(d, g) {
+  g = g || STREET.ring;
   d = ((d % g.total) + g.total) % g.total;
   var segs = [
     { len: g.Lb, p: function (s) { return { x: g.x0 + g.r + s, y: g.y1 }; } },
@@ -285,8 +293,8 @@ function ringPointAt(d) {
   }
   return segs[0].p(0);
 }
-function ringD(p) {
-  var g = STREET.ring;
+function ringD(p, g) {
+  g = g || STREET.ring;
   if (Math.abs(p.y - g.y1) < 2 && p.x >= g.x0 + g.r - 2 && p.x <= g.x1 - g.r + 2) return p.x - (g.x0 + g.r);
   if (Math.abs(p.x - g.x1) < 2 && p.y <= g.y1 - g.r + 2 && p.y >= g.y0 + g.r - 2) return g.Lb + g.arc + ((g.y1 - g.r) - p.y);
   if (Math.abs(p.y - g.y0) < 2 && p.x <= g.x1 - g.r + 2 && p.x >= g.x0 + g.r - 2) return g.Lb + g.arc + g.Lv + g.arc + ((g.x1 - g.r) - p.x);
@@ -300,31 +308,33 @@ function buildGraph(extra) {
   function link(a, b) { if (a !== b && adj[a].indexOf(b) < 0) { adj[a].push(b); adj[b].push(a); } }
   var lines = [];
   STREET.vx.forEach(function (x) {
-    var ys = [STREET.ring.y0, STREET.T, STREET.hy[0], STREET.hy[1], STREET.B, STREET.ring.y1];
+    var ys = [STREET.ring2.y0, STREET.ring.y0, STREET.T, STREET.hy[0], STREET.hy[1], STREET.B, STREET.ring.y1, STREET.ring2.y1];
     extra.forEach(function (p) { if (Math.abs(p.x - x) < 2) ys.push(p.y); });
     ys.sort(function (a, b) { return a - b; });
     lines.push(ys.map(function (y) { return node(x, y); }));
   });
   STREET.hy.forEach(function (y) {
-    var xs = [STREET.ring.x0, STREET.L, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.R, STREET.ring.x1];
+    var xs = [STREET.ring2.x0, STREET.ring.x0, STREET.L, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.R, STREET.ring.x1, STREET.ring2.x1];
     extra.forEach(function (p) { if (Math.abs(p.y - y) < 2) xs.push(p.x); });
     xs.sort(function (a, b) { return a - b; });
     lines.push(xs.map(function (x) { return node(x, y); }));
   });
   lines.forEach(function (ks) { for (var i = 0; i + 1 < ks.length; i++) link(ks[i], ks[i + 1]); });
-  // Vòng ngoài: nối các điểm mốc + điểm giao với đường trong thành một vòng kín
-  var g2 = STREET.ring, ds = [0], cum = 0;
-  [g2.Lb, g2.arc, g2.Lv, g2.arc, g2.Lb, g2.arc, g2.Lv, g2.arc].forEach(function (L, idx) {
-    if (idx % 2 === 1) ds.push(cum + L / 2);
-    cum += L;
-    if (idx < 7) ds.push(cum);
+  // Hai vòng ngoài: nối các điểm mốc + điểm giao với đường trong thành vòng kín
+  [STREET.ring, STREET.ring2].forEach(function (g2) {
+    var ds = [0], cum = 0;
+    [g2.Lb, g2.arc, g2.Lv, g2.arc, g2.Lb, g2.arc, g2.Lv, g2.arc].forEach(function (L, idx) {
+      if (idx % 2 === 1) ds.push(cum + L / 2);
+      cum += L;
+      if (idx < 7) ds.push(cum);
+    });
+    STREET.vx.forEach(function (x) { ds.push(ringD({ x: x, y: g2.y1 }, g2)); ds.push(ringD({ x: x, y: g2.y0 }, g2)); });
+    STREET.hy.forEach(function (y) { ds.push(ringD({ x: g2.x1, y: y }, g2)); ds.push(ringD({ x: g2.x0, y: y }, g2)); });
+    extra.forEach(function (p) { var d = ringD(p, g2); if (d !== null) ds.push(d); });
+    ds = ds.filter(function (d) { return d !== null && d >= 0; }).sort(function (a, b) { return a - b; });
+    var ringKeys = ds.map(function (d) { var pt = ringPointAt(d, g2); return node(pt.x, pt.y); });
+    for (var ri = 0; ri < ringKeys.length; ri++) link(ringKeys[ri], ringKeys[(ri + 1) % ringKeys.length]);
   });
-  STREET.vx.forEach(function (x) { ds.push(ringD({ x: x, y: g2.y1 })); ds.push(ringD({ x: x, y: g2.y0 })); });
-  STREET.hy.forEach(function (y) { ds.push(ringD({ x: g2.x1, y: y })); ds.push(ringD({ x: g2.x0, y: y })); });
-  extra.forEach(function (p) { var d = ringD(p); if (d !== null) ds.push(d); });
-  ds = ds.filter(function (d) { return d !== null && d >= 0; }).sort(function (a, b) { return a - b; });
-  var ringKeys = ds.map(function (d) { var pt = ringPointAt(d); return node(pt.x, pt.y); });
-  for (var ri = 0; ri < ringKeys.length; ri++) link(ringKeys[ri], ringKeys[(ri + 1) % ringKeys.length]);
   return { nodes: nodes, adj: adj };
 }
 function route(from, to) {
@@ -409,14 +419,15 @@ function stepDrive(dir) {
 }
 function tourCar() {
   if (st.carRun) return;
-  var g = STREET.ring, vx = STREET.vx, hy = STREET.hy;
+  var g = STREET.ring, g2 = STREET.ring2, vx = STREET.vx, hy = STREET.hy;
   var W = [
     { x: vx[0], y: g.y0 }, { x: vx[2], y: g.y0 }, { x: vx[2], y: g.y1 }, { x: vx[1], y: g.y1 },
     { x: vx[1], y: g.y0 }, { x: g.x1, y: g.y0 + g.r }, { x: g.x1, y: hy[0] }, { x: g.x0, y: hy[0] },
     { x: g.x0 + g.r, y: g.y0 }, { x: g.x0, y: hy[1] }, { x: g.x1, y: hy[1] }, { x: g.x1, y: g.y1 - g.r },
-    { x: vx[0], y: g.y1 }
+    { x: vx[0], y: g.y1 },
+    { x: vx[0], y: g2.y1 }, { x: g2.x1, y: g2.y1 - g2.r }, { x: g2.x1, y: g2.y0 + g2.r }, { x: vx[0], y: g2.y0 }
   ];
-  document.getElementById("carInfo").textContent = "Xe đang chạy hết các đường trong khu phố, cả vòng ngoài… tốc độ " + kmhNow() + " km/h";
+  document.getElementById("carInfo").textContent = "Xe đang chạy hết các đường trong khu phố, cả hai vòng ngoài… tốc độ " + kmhNow() + " km/h";
   var pts = route(carState.pos, W[0]);
   for (var i = 0; i + 1 < W.length; i++) pts = pts.concat(route(W[i], W[i + 1]).slice(1));
   pts = pts.concat(route(W[W.length - 1], carState.pos).slice(1));
