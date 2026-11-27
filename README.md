@@ -5,7 +5,7 @@ Học liệu tương tác của chủ đề **GREEN HOME 5D** (Tiếng Anh 7, TH
 ## ▶️ Chơi trực tuyến
 
 Bật GitHub Pages cho kho này (Settings → Pages → Deploy from a branch → `main` / `root`) rồi mở:
-**https://nnhthuong.github.io/khu-pho-xanh/**
+**https://nnhthuong.github.io/our-green-neighborhood-/**
 
 Hoặc tải file `index.html` về và mở bằng trình duyệt — trò chơi chạy hoàn toàn trong một file, không cần mạng.
 
