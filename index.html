@@ -17,7 +17,7 @@
   #wrap { display: flex; gap: 14px; padding: 14px 18px; align-items: flex-start; }
   #scene { flex: 1 1 62%; background: linear-gradient(#bfe3f2 0 18%, #cfe8c8 18% 100%); border: 3px solid #2e7d52; border-radius: 14px; padding: 12px; position: relative; overflow: hidden; }
   .row { display: flex; gap: 10px; justify-content: space-between; }
-  .plot { flex: 1; height: 150px; border: 3px dashed #7a8a6a; border-radius: 10px; background: rgba(255,255,255,.45);
+  .plot { flex: 1; aspect-ratio: 4 / 3; border: 3px dashed #7a8a6a; border-radius: 10px; background: rgba(255,255,255,.45);
           display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer;
           font-size: 14px; color: #55603f; padding: 4px; position: relative; overflow: hidden; white-space: pre-line; }
   .plot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -25,9 +25,10 @@
   .plot.filled { border-style: solid; border-color: #2e7d52; cursor: default; animation: pop .45s ease; }
   .plot.shared { border-color: #8a6d1f; background: rgba(255,248,214,.6); }
   @keyframes pop { 0% { transform: scale(.7); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
-  #road { height: 64px; background: #5b6670; border-radius: 8px; margin: 12px 0; position: relative; overflow: hidden; }
-  #road::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 4px dashed #ffd94d; }
-  #car { position: absolute; top: 6px; left: -70px; font-size: 44px; transition: none; transform: scaleX(-1); }
+  .ring { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
+  .dashring { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
+  #block { position: relative; z-index: 1; margin: 54px 58px; }
+  #car { position: absolute; top: 0; left: 0; font-size: 44px; z-index: 3; pointer-events: none; will-change: left, top, transform; }
   #sharedRow { margin-top: 2px; }
   .sharedLabel { font-weight: 700; color: #7a5c00; margin: 4px 0 6px; font-size: 15px; }
   #panel { flex: 1 1 34%; display: flex; flex-direction: column; gap: 12px; }
@@ -35,7 +36,7 @@
   .box h3 { font-size: 16px; margin-bottom: 8px; color: #274b73; }
   .shelf { display: flex; flex-wrap: wrap; gap: 8px; }
   .card { width: 96px; border: 3px solid #c9d6c0; border-radius: 10px; overflow: hidden; cursor: pointer; background: #fff; }
-  .card img { width: 100%; height: 62px; object-fit: cover; display: block; }
+  .card img { width: 100%; height: 72px; object-fit: cover; display: block; }
   .card .nm { font-size: 11.5px; text-align: center; padding: 3px 2px; font-weight: 600; }
   .card .cost { font-size: 11px; text-align: center; color: #8a4b00; padding-bottom: 4px; }
   .card.sel { border-color: #e67e22; box-shadow: 0 0 0 3px #ffd9ae; }
@@ -76,11 +77,15 @@
   Nhà cần <b>3 đồ + 2 công</b> · Khu dùng chung cần <b>4 đồ + 3 công</b>. &nbsp;|&nbsp; Chỉ số xanh = nhà ×8 + khu chung ×11 + vòng xe tham quan đầu tiên ×8.</div>
 <div id="wrap">
   <div id="scene">
-    <div class="row" id="plotsTop"></div>
-    <div id="road"><div id="car">🚗</div></div>
-    <div class="row" id="plotsBot"></div>
-    <div class="sharedLabel">🏛️ DÃY KHU DÙNG CHUNG — của chung, cả khu phố cùng trông coi</div>
-    <div class="row" id="plotsShared"></div>
+    <div class="ring"></div>
+    <div class="dashring"></div>
+    <div id="block">
+      <div class="row" id="plotsTop"></div>
+      <div class="row" id="plotsBot" style="margin-top:10px"></div>
+      <div class="sharedLabel">🏛️ DÃY KHU DÙNG CHUNG — của chung, cả khu phố cùng trông coi</div>
+      <div class="row" id="plotsShared"></div>
+    </div>
+    <div id="car">🚗</div>
   </div>
   <div id="panel">
     <div class="box">
@@ -224,17 +229,47 @@ function place(plot, kind) {
 }
 function runCar() {
   if (st.carRun) return;
-  var car = document.getElementById("car"), road = document.getElementById("road");
-  var dur = parseInt(document.getElementById("speed").value, 10);
-  var kmh = dur === 9000 ? 10 : (dur === 6000 ? 18 : 30);
+  var scene = document.getElementById("scene"), car = document.getElementById("car");
+  var dur = parseInt(document.getElementById("speed").value, 10) * 2;
+  var kmh = dur === 18000 ? 10 : (dur === 12000 ? 18 : 30);
+  var W = scene.clientWidth, H = scene.clientHeight;
+  var x0 = 21, y0 = 21, x1 = W - 21, y1 = H - 21, r = 26;
+  var Lb = (x1 - r) - (x0 + r), Lv = (y1 - r) - (y0 + r), arc = Math.PI * r / 2;
+  var segs = [
+    { len: Lb, p: function (s) { return [x0 + r + s, y1]; } },
+    { len: arc, p: function (s) { var a = Math.PI / 2 - s / r; return [x1 - r + r * Math.cos(a), y1 - r + r * Math.sin(a)]; } },
+    { len: Lv, p: function (s) { return [x1, y1 - r - s]; } },
+    { len: arc, p: function (s) { var a = 0 - s / r; return [x1 - r + r * Math.cos(a), y0 + r + r * Math.sin(a)]; } },
+    { len: Lb, p: function (s) { return [x1 - r - s, y0]; } },
+    { len: arc, p: function (s) { var a = -Math.PI / 2 - s / r; return [x0 + r + r * Math.cos(a), y0 + r + r * Math.sin(a)]; } },
+    { len: Lv, p: function (s) { return [x0, y0 + r + s]; } },
+    { len: arc, p: function (s) { var a = Math.PI - s / r; return [x0 + r + r * Math.cos(a), y1 - r + r * Math.sin(a)]; } }
+  ];
+  var total = segs.reduce(function (t, s) { return t + s.len; }, 0);
+  function pointAt(d) {
+    d = ((d % total) + total) % total;
+    for (var i = 0; i < segs.length; i++) {
+      if (d <= segs[i].len) return segs[i].p(d);
+      d -= segs[i].len;
+    }
+    return segs[0].p(0);
+  }
   st.carRun = true; document.getElementById("btnCar").disabled = true;
-  document.getElementById("carInfo").textContent = "Xe đang chạy… tốc độ " + kmh + " km/h";
-  car.style.transition = "none"; car.style.left = "-70px";
-  requestAnimationFrame(function () { requestAnimationFrame(function () {
-    car.style.transition = "left " + dur + "ms linear"; car.style.left = (road.clientWidth + 10) + "px"; }); });
-  setTimeout(function () { st.laps++; st.carRun = false; document.getElementById("btnCar").disabled = false;
-    document.getElementById("carInfo").textContent = "Đã tham quan xong vòng " + st.laps + " với tốc độ " + kmh + " km/h. Khu phố có " + st.houses + " nhà, " + st.shared + " khu dùng chung.";
-    beep(980); log("Xe tham quan vòng " + st.laps + " (" + kmh + " km/h) — Chỉ số xanh: " + green() + "%"); refresh(); }, dur + 60);
+  document.getElementById("carInfo").textContent = "Xe đang chạy vòng quanh khu phố… tốc độ " + kmh + " km/h";
+  var t0 = null;
+  function step(ts) {
+    if (!t0) t0 = ts;
+    var k = Math.min(1, (ts - t0) / dur), d = k * total;
+    var p = pointAt(d), q = pointAt(d + 2);
+    var ang = Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI;
+    car.style.left = (p[0] - 27) + "px"; car.style.top = (p[1] - 24) + "px";
+    car.style.transform = "rotate(" + ang + "deg) scaleX(-1)";
+    if (k < 1) { requestAnimationFrame(step); return; }
+    st.laps++; st.carRun = false; document.getElementById("btnCar").disabled = false;
+    document.getElementById("carInfo").textContent = "Đã chạy xong vòng " + st.laps + " quanh khu phố (" + kmh + " km/h). Khu phố có " + st.houses + " nhà, " + st.shared + " khu dùng chung.";
+    beep(980); log("Xe chạy vòng quanh khu phố — vòng " + st.laps + " (" + kmh + " km/h) — Chỉ số xanh: " + green() + "%"); refresh();
+  }
+  requestAnimationFrame(step);
 }
 (function init() {
   var top = document.getElementById("plotsTop"), bot = document.getElementById("plotsBot"), shr = document.getElementById("plotsShared");
