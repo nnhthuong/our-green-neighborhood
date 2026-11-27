@@ -15,7 +15,7 @@
   .chip.green { background: #2e7d52; color: #fff; }
   #goal { padding: 8px 18px; background: #fff7dd; border-bottom: 2px solid #e3cf8a; font-size: 15px; }
   #wrap { display: flex; gap: 14px; padding: 14px 18px; align-items: flex-start; }
-  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 14px; padding: 14px; position: relative; }
+  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 26px; padding: 14px; position: relative; overflow: hidden; }
   #conns { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .connV { position: absolute; top: 0; bottom: 0; width: 48px; background: #5b6670; }
   .connV::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 3px dashed #ffd94d; }
@@ -271,13 +271,13 @@ function buildGraph(extra) {
   function link(a, b) { if (a !== b && adj[a].indexOf(b) < 0) { adj[a].push(b); adj[b].push(a); } }
   var lines = [];
   STREET.vx.forEach(function (x) {
-    var ys = [0, STREET.T, STREET.hy[0], STREET.hy[1], STREET.B, STREET.H];
+    var ys = [STREET.T, STREET.hy[0], STREET.hy[1], STREET.B];
     extra.forEach(function (p) { if (Math.abs(p.x - x) < 2) ys.push(p.y); });
     ys.sort(function (a, b) { return a - b; });
     lines.push(ys.map(function (y) { return node(x, y); }));
   });
   STREET.hy.forEach(function (y) {
-    var xs = [0, STREET.L, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.R, STREET.W];
+    var xs = [STREET.L, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.R];
     extra.forEach(function (p) { if (Math.abs(p.y - y) < 2) xs.push(p.x); });
     xs.sort(function (a, b) { return a - b; });
     lines.push(xs.map(function (x) { return node(x, y); }));
@@ -367,11 +367,11 @@ function stepDrive(dir) {
 }
 function tourCar() {
   if (st.carRun) return;
-  var vx = STREET.vx, hy = STREET.hy, Wd = STREET.W, Hd = STREET.H;
+  var vx = STREET.vx, hy = STREET.hy, L = STREET.L, R = STREET.R, T = STREET.T, B = STREET.B;
   var W = [
-    { x: vx[0], y: 0 }, { x: vx[0], y: Hd }, { x: vx[2], y: Hd }, { x: vx[2], y: 0 },
-    { x: vx[1], y: 0 }, { x: vx[1], y: Hd }, { x: Wd, y: hy[0] }, { x: 0, y: hy[0] },
-    { x: 0, y: hy[1] }, { x: Wd, y: hy[1] }
+    { x: vx[0], y: T }, { x: vx[0], y: B }, { x: vx[2], y: B }, { x: vx[2], y: T },
+    { x: vx[1], y: T }, { x: vx[1], y: B }, { x: R, y: hy[0] }, { x: L, y: hy[0] },
+    { x: L, y: hy[1] }, { x: R, y: hy[1] }
   ];
   document.getElementById("carInfo").textContent = "Xe đang chạy hết các đường trong khu phố… tốc độ " + kmhNow() + " km/h";
   var pts = route(carState.pos, W[0]);
@@ -390,11 +390,13 @@ function buildSegs() {
   STREET.vx.forEach(function (x) {
     var d = document.createElement("div"); d.className = "connV";
     d.style.left = (x - 24) + "px";
+    d.style.top = STREET.T + "px"; d.style.height = (STREET.B - STREET.T) + "px"; d.style.bottom = "auto";
     conns.appendChild(d);
   });
   STREET.hy.forEach(function (y) {
     var d = document.createElement("div"); d.className = "connH";
     d.style.top = (y - 24) + "px";
+    d.style.left = STREET.L + "px"; d.style.width = (STREET.R - STREET.L) + "px"; d.style.right = "auto";
     conns.appendChild(d);
   });
   var box = document.getElementById("segs");
