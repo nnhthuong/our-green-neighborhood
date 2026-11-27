@@ -15,11 +15,9 @@
   .chip.green { background: #2e7d52; color: #fff; }
   #goal { padding: 8px 18px; background: #fff7dd; border-bottom: 2px solid #e3cf8a; font-size: 15px; }
   #wrap { display: flex; gap: 14px; padding: 14px 18px; align-items: flex-start; }
-  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 14px; padding: 116px; position: relative; }
-  .ring { position: absolute; inset: 64px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
-  .dashring { position: absolute; inset: 81px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
-  .ring2 { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
-  .dashring2 { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
+  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 14px; padding: 56px; position: relative; }
+  .ring { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
+  .dashring { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
   #conns { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .connV { position: absolute; top: 0; bottom: 0; width: 48px; background: #5b6670; }
   .connV::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 3px dashed #ffd94d; }
@@ -96,8 +94,6 @@
   Nhà cần <b>3 đồ + 2 công</b> · Khu dùng chung cần <b>4 đồ + 3 công</b>. &nbsp;|&nbsp; Chỉ số xanh = nhà ×8 + khu chung ×11 + vòng xe tham quan đầu tiên ×8.</div>
 <div id="wrap">
   <div id="scene">
-    <div class="ring2"></div>
-    <div class="dashring2"></div>
     <div class="ring"></div>
     <div class="dashring"></div>
     <div id="conns"></div>
@@ -277,8 +273,7 @@ function measureStreets() {
     g.total = 2 * (g.Lb + g.Lv) + 4 * g.arc;
     return g;
   }
-  STREET.ring = makeRing(81);
-  STREET.ring2 = makeRing(21);
+  STREET.ring = makeRing(21);
 }
 function ringPointAt(d, g) {
   g = g || STREET.ring;
@@ -314,20 +309,20 @@ function buildGraph(extra) {
   function link(a, b) { if (a !== b && adj[a].indexOf(b) < 0) { adj[a].push(b); adj[b].push(a); } }
   var lines = [];
   STREET.vx.forEach(function (x) {
-    var ys = [STREET.ring2.y0, STREET.ring.y0, STREET.T, STREET.hy[0], STREET.hy[1], STREET.B, STREET.ring.y1, STREET.ring2.y1];
+    var ys = [STREET.ring.y0, STREET.T, STREET.hy[0], STREET.hy[1], STREET.B, STREET.ring.y1];
     extra.forEach(function (p) { if (Math.abs(p.x - x) < 2) ys.push(p.y); });
     ys.sort(function (a, b) { return a - b; });
     lines.push(ys.map(function (y) { return node(x, y); }));
   });
   STREET.hy.forEach(function (y) {
-    var xs = [STREET.ring2.x0, STREET.ring.x0, STREET.L, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.R, STREET.ring.x1, STREET.ring2.x1];
+    var xs = [STREET.ring.x0, STREET.L, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.R, STREET.ring.x1];
     extra.forEach(function (p) { if (Math.abs(p.y - y) < 2) xs.push(p.x); });
     xs.sort(function (a, b) { return a - b; });
     lines.push(xs.map(function (x) { return node(x, y); }));
   });
   lines.forEach(function (ks) { for (var i = 0; i + 1 < ks.length; i++) link(ks[i], ks[i + 1]); });
-  // Hai vòng ngoài: nối các điểm mốc + điểm giao với đường trong thành vòng kín
-  [STREET.ring, STREET.ring2].forEach(function (g2) {
+  // Vòng ngoài: nối các điểm mốc + điểm giao với đường trong thành vòng kín
+  [STREET.ring].forEach(function (g2) {
     var ds = [0], cum = 0;
     [g2.Lb, g2.arc, g2.Lv, g2.arc, g2.Lb, g2.arc, g2.Lv, g2.arc].forEach(function (L, idx) {
       if (idx % 2 === 1) ds.push(cum + L / 2);
@@ -425,15 +420,14 @@ function stepDrive(dir) {
 }
 function tourCar() {
   if (st.carRun) return;
-  var g = STREET.ring, g2 = STREET.ring2, vx = STREET.vx, hy = STREET.hy;
+  var g = STREET.ring, vx = STREET.vx, hy = STREET.hy;
   var W = [
     { x: vx[0], y: g.y0 }, { x: vx[2], y: g.y0 }, { x: vx[2], y: g.y1 }, { x: vx[1], y: g.y1 },
     { x: vx[1], y: g.y0 }, { x: g.x1, y: g.y0 + g.r }, { x: g.x1, y: hy[0] }, { x: g.x0, y: hy[0] },
     { x: g.x0 + g.r, y: g.y0 }, { x: g.x0, y: hy[1] }, { x: g.x1, y: hy[1] }, { x: g.x1, y: g.y1 - g.r },
-    { x: vx[0], y: g.y1 },
-    { x: vx[0], y: g2.y1 }, { x: g2.x1, y: g2.y1 - g2.r }, { x: g2.x1, y: g2.y0 + g2.r }, { x: vx[0], y: g2.y0 }
+    { x: vx[0], y: g.y1 }
   ];
-  document.getElementById("carInfo").textContent = "Xe đang chạy hết các đường trong khu phố, cả hai vòng ngoài… tốc độ " + kmhNow() + " km/h";
+  document.getElementById("carInfo").textContent = "Xe đang chạy hết các đường trong khu phố, cả vòng ngoài… tốc độ " + kmhNow() + " km/h";
   var pts = route(carState.pos, W[0]);
   for (var i = 0; i + 1 < W.length; i++) pts = pts.concat(route(W[i], W[i + 1]).slice(1));
   pts = pts.concat(route(W[W.length - 1], carState.pos).slice(1));
