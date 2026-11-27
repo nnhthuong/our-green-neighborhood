@@ -15,7 +15,13 @@
   .chip.green { background: #2e7d52; color: #fff; }
   #goal { padding: 8px 18px; background: #fff7dd; border-bottom: 2px solid #e3cf8a; font-size: 15px; }
   #wrap { display: flex; gap: 14px; padding: 14px 18px; align-items: flex-start; }
-  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 14px; padding: 12px; position: relative; }
+  #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 14px; padding: 52px 56px; position: relative; }
+  .ring { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
+  .dashring { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
+  #block { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; position: relative; z-index: 1; }
+  .seg { position: absolute; z-index: 2; cursor: pointer; border-radius: 8px; background: rgba(255,217,77,0); }
+  .seg:hover { background: rgba(255,217,77,.5); outline: 2px solid #e6a817; }
+  #car { position: absolute; font-size: 44px; z-index: 3; pointer-events: none; }
   .row { display: flex; gap: 10px; justify-content: space-between; }
   .plot { flex: 1; aspect-ratio: 4 / 3; border: 3px dashed #7a8a6a; border-radius: 10px; background: rgba(255,255,255,.45);
           display: flex; align-items: center; justify-content: center; text-align: center; cursor: pointer;
@@ -25,9 +31,7 @@
   .plot.filled { border-style: solid; border-color: #2e7d52; cursor: default; animation: pop .45s ease; }
   .plot.shared { border-color: #8a6d1f; background: rgba(255,248,214,.6); }
   @keyframes pop { 0% { transform: scale(.7); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
-  #road { height: 66px; background: #5b6670; border-radius: 8px; margin: 12px 0; position: relative; overflow: hidden; }
-  #road::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 4px dashed #ffd94d; }
-  #car { position: absolute; top: 8px; left: 6px; font-size: 44px; transform: scaleX(-1); }
+  #road { display: none; }
   #sharedRow { margin-top: 2px; }
   .sharedLabel { font-weight: 700; color: #7a5c00; margin: 4px 0 6px; font-size: 15px; }
   #panel { flex: 1 1 34%; display: flex; flex-direction: column; gap: 12px; }
@@ -48,6 +52,7 @@
   .stock { font-size: 14px; margin-top: 6px; line-height: 1.5; }
   #carRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   #btnCar { background: #274b73; color: #fff; font-weight: 700; border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer; font-size: 15px; }
+  .drvBtn { background: #fff; color: #274b73; font-weight: 700; border: 2px solid #274b73; border-radius: 10px; padding: 9px 12px; cursor: pointer; font-size: 15px; }
   select { font-size: 14px; padding: 8px; border-radius: 8px; }
   #toast { min-height: 24px; font-weight: 700; color: #a33b32; font-size: 15px; }
   #log { max-height: 190px; overflow-y: auto; font-size: 13.5px; line-height: 1.55; }
@@ -76,11 +81,11 @@
   Nhà cần <b>3 đồ + 2 công</b> · Khu dùng chung cần <b>4 đồ + 3 công</b>. &nbsp;|&nbsp; Chỉ số xanh = nhà ×8 + khu chung ×11 + vòng xe tham quan đầu tiên ×8.</div>
 <div id="wrap">
   <div id="scene">
-    <div class="row" id="plotsTop"></div>
-    <div class="row" id="plotsBot" style="margin-top:10px"></div>
-    <div id="road"><div id="car">🚗</div></div>
-    <div class="sharedLabel">🏛️ DÃY KHU DÙNG CHUNG — của chung, cả khu phố cùng trông coi</div>
-    <div class="row" id="plotsShared"></div>
+    <div class="ring"></div>
+    <div class="dashring"></div>
+    <div id="block"></div>
+    <div id="segs"></div>
+    <div id="car">🚗</div>
   </div>
   <div id="panel">
     <div class="box">
@@ -104,11 +109,13 @@
       <div class="shelf" id="shelfShared"></div>
     </div>
     <div class="box">
-      <h3>🚗 XE THAM QUAN KHU PHỐ</h3>
+      <h3>🚗 XE THAM QUAN — bấm vào đoạn đường trước nhà nào, xe chạy tới nhà đó</h3>
       <div id="carRow">
-        <button id="btnCar" onclick="runCar()">▶ Chạy tham quan</button>
+        <button class="drvBtn" onclick="stepDrive(-1)">⬅ Lùi</button>
+        <button id="btnCar" onclick="tourCar()">▶ Chạy tham quan</button>
+        <button class="drvBtn" onclick="stepDrive(1)">Tiến ➡</button>
         <label>Tốc độ: <select id="speed"><option value="9000">Chậm · 10 km/h</option><option value="6000" selected>Vừa · 18 km/h</option><option value="3500">Nhanh · 30 km/h</option></select></label>
-        <span id="carInfo">Xe đang đỗ.</span>
+        <span id="carInfo">Xe đang đỗ ở góc dưới trái. Bấm vào đoạn đường màu vàng trước một ô nhà hoặc khu dùng chung để xe chạy tới đó.</span>
       </div>
     </div>
     <div id="toast"></div>
@@ -215,6 +222,7 @@ function place(plot, kind) {
   st.doBank -= cost.do; st.congBank -= cost.cong;
   var item = kind === "H" ? HOUSES[st.sel.idx] : SHARED[st.sel.idx];
   plot.classList.add("filled");
+  plot.dataset.itemName = item.name;
   plot.innerHTML = (item.img ? "<img src='" + item.img + "' alt=''>" : "<div style='font-size:64px'>🔧</div>") + "<div class='tag'>" + item.name + "</div>";
   st.sel.el.classList.add("used"); st.sel.el.classList.remove("sel");
   if (kind === "H") st.houses++; else st.shared++;
@@ -222,45 +230,150 @@ function place(plot, kind) {
   log("Xây " + (kind === "H" ? "nhà" : "khu dùng chung") + ": " + item.name + " (−" + cost.do + " đồ, −" + cost.cong + " công)");
   st.sel = null; refresh();
 }
-function runCar() {
-  if (st.carRun) return;
-  var road = document.getElementById("road"), car = document.getElementById("car");
-  var total = parseInt(document.getElementById("speed").value, 10);
-  var kmh = total === 9000 ? 10 : (total === 6000 ? 18 : 30);
-  var leg = total / 2, W = road.clientWidth;
-  var xFrom = -70, xTo = W + 6;
-  st.carRun = true; document.getElementById("btnCar").disabled = true;
-  document.getElementById("carInfo").textContent = "Xe đang chạy qua khu phố… tốc độ " + kmh + " km/h";
-  var t0 = null;
+var carState = { d: 0, total: 0, anim: 0, targets: [] };
+var PLOTS = [];
+function pathGeom() {
+  var scene = document.getElementById("scene");
+  var W = scene.clientWidth, H = scene.clientHeight;
+  var x0 = 21, y0 = 21, x1 = W - 21, y1 = H - 21, r = 26;
+  var Lb = (x1 - r) - (x0 + r), Lv = (y1 - r) - (y0 + r), arc = Math.PI * r / 2;
+  var segs = [
+    { len: Lb, p: function (s) { return [x0 + r + s, y1]; } },
+    { len: arc, p: function (s) { var a = Math.PI / 2 - s / r; return [x1 - r + r * Math.cos(a), y1 - r + r * Math.sin(a)]; } },
+    { len: Lv, p: function (s) { return [x1, y1 - r - s]; } },
+    { len: arc, p: function (s) { var a = 0 - s / r; return [x1 - r + r * Math.cos(a), y0 + r + r * Math.sin(a)]; } },
+    { len: Lb, p: function (s) { return [x1 - r - s, y0]; } },
+    { len: arc, p: function (s) { var a = -Math.PI / 2 - s / r; return [x0 + r + r * Math.cos(a), y0 + r + r * Math.sin(a)]; } },
+    { len: Lv, p: function (s) { return [x0, y0 + r + s]; } },
+    { len: arc, p: function (s) { var a = Math.PI - s / r; return [x0 + r + r * Math.cos(a), y1 - r + r * Math.sin(a)]; } }
+  ];
+  return { segs: segs, total: segs.reduce(function (t, s) { return t + s.len; }, 0),
+           x0: x0, y0: y0, x1: x1, y1: y1, r: r, Lb: Lb, Lv: Lv, arc: arc };
+}
+function pointAt(g, d) {
+  d = ((d % g.total) + g.total) % g.total;
+  for (var i = 0; i < g.segs.length; i++) {
+    if (d <= g.segs[i].len) return g.segs[i].p(d);
+    d -= g.segs[i].len;
+  }
+  return g.segs[0].p(0);
+}
+function drawCar(g, d, dir) {
+  var p = pointAt(g, d), q = pointAt(g, d + dir * 2.5);
+  var ang = Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI;
+  var car = document.getElementById("car");
+  car.style.left = (p[0] - 27) + "px"; car.style.top = (p[1] - 24) + "px";
+  car.style.transform = "rotate(" + ang + "deg) scaleX(-1)";
+}
+function kmhNow() { var v = document.getElementById("speed").value; return v === "9000" ? 10 : (v === "6000" ? 18 : 30); }
+function pxPerSec() { var v = document.getElementById("speed").value; return v === "9000" ? 140 : (v === "6000" ? 230 : 400); }
+function driveDelta(delta, done) {
+  if (Math.abs(delta) < 2) { if (done) done(); return; }
+  var g = pathGeom(), dir = delta >= 0 ? 1 : -1;
+  var dur = Math.abs(delta) / pxPerSec() * 1000;
+  var token = ++carState.anim, start = null, from = carState.d;
+  st.carRun = true;
   function step(ts) {
-    if (!t0) t0 = ts;
-    var t = ts - t0;
-    if (t < leg) {
-      car.style.transform = "scaleX(-1)";
-      car.style.left = (xFrom + (xTo - xFrom) * (t / leg)) + "px";
-    } else if (t < total) {
-      car.style.transform = "scaleX(1)";
-      car.style.left = (xTo + (xFrom - xTo) * ((t - leg) / leg)) + "px";
-    } else {
-      car.style.left = "6px"; car.style.transform = "scaleX(-1)";
-      st.laps++; st.carRun = false; document.getElementById("btnCar").disabled = false;
-      document.getElementById("carInfo").textContent = "Đã chạy xong vòng " + st.laps + " qua khu phố (" + kmh + " km/h). Khu phố có " + st.houses + " nhà, " + st.shared + " khu dùng chung.";
-      beep(980); log("Xe chạy một vòng qua khu phố (đi + về) — vòng " + st.laps + " (" + kmh + " km/h) — Chỉ số xanh: " + green() + "%"); refresh();
-      return;
-    }
-    requestAnimationFrame(step);
+    if (token !== carState.anim) return;
+    if (!start) start = ts;
+    var k = Math.min(1, (ts - start) / dur);
+    carState.d = from + delta * k;
+    drawCar(g, carState.d, dir);
+    if (k < 1) requestAnimationFrame(step);
+    else { st.carRun = false; if (done) done(); }
   }
   requestAnimationFrame(step);
 }
+function arrive(label) {
+  beep(980);
+  document.getElementById("carInfo").textContent = "Xe đang dừng trước: " + label + ".";
+  log("Xe dừng trước: " + label);
+}
+function goToTarget(t) {
+  if (st.carRun) return;
+  var g = pathGeom(), cur = ((carState.d % g.total) + g.total) % g.total;
+  var delta = ((t.d - cur) % g.total + g.total) % g.total;
+  if (delta > g.total / 2) delta -= g.total;
+  var label = t.plot.label();
+  if (Math.abs(delta) < 2) { arrive(label); return; }
+  document.getElementById("carInfo").textContent = "Xe đang chạy tới: " + label + "… (" + kmhNow() + " km/h)";
+  driveDelta(delta, function () { arrive(label); });
+}
+function stepDrive(dir) {
+  if (st.carRun || !carState.targets.length) return;
+  var g = pathGeom(), cur = ((carState.d % g.total) + g.total) % g.total;
+  var sorted = carState.targets.slice().sort(function (a, b) { return a.d - b.d; });
+  var pick = null, i;
+  if (dir > 0) { for (i = 0; i < sorted.length; i++) if (sorted[i].d > cur + 4) { pick = sorted[i]; break; } pick = pick || sorted[0]; }
+  else { for (i = sorted.length - 1; i >= 0; i--) if (sorted[i].d < cur - 4) { pick = sorted[i]; break; } pick = pick || sorted[sorted.length - 1]; }
+  var delta = ((pick.d - cur) % g.total + g.total) % g.total;
+  if (dir < 0) delta -= g.total;
+  if (delta === 0) delta = dir * g.total;
+  var label = pick.plot.label();
+  document.getElementById("carInfo").textContent = "Xe đang " + (dir > 0 ? "tiến" : "lùi") + " tới: " + label + "…";
+  driveDelta(delta, function () { arrive(label); });
+}
+function tourCar() {
+  if (st.carRun) return;
+  var g = pathGeom();
+  document.getElementById("carInfo").textContent = "Xe đang chạy một vòng quanh khu phố… tốc độ " + kmhNow() + " km/h";
+  driveDelta(g.total, function () {
+    st.laps++; refresh();
+    document.getElementById("carInfo").textContent = "Đã chạy xong vòng " + st.laps + " quanh khu phố. Khu phố có " + st.houses + " nhà, " + st.shared + " khu dùng chung.";
+    beep(980); log("Xe chạy vòng quanh khu phố — vòng " + st.laps + " — Chỉ số xanh: " + green() + "%");
+  });
+}
+function buildSegs() {
+  var scene = document.getElementById("scene"), box = document.getElementById("segs");
+  box.innerHTML = ""; carState.targets = [];
+  var sr = scene.getBoundingClientRect(), g = pathGeom();
+  var offX = sr.left + 3, offY = sr.top + 3;
+  PLOTS.forEach(function (pl) {
+    var pr = pl.el.getBoundingClientRect();
+    var rx = pr.left - offX, ry = pr.top - offY, cx = rx + pr.width / 2, cy = ry + pr.height / 2;
+    var seg = document.createElement("div"); seg.className = "seg";
+    seg.title = "Bấm để xe chạy tới trước ô này";
+    var d;
+    if (pl.side === "top") {
+      seg.style.left = rx + "px"; seg.style.width = pr.width + "px"; seg.style.top = "2px"; seg.style.height = "44px";
+      d = g.Lb + g.arc + g.Lv + g.arc + ((g.x1 - g.r) - cx);
+    } else if (pl.side === "bottom") {
+      seg.style.left = rx + "px"; seg.style.width = pr.width + "px"; seg.style.top = (scene.clientHeight - 46) + "px"; seg.style.height = "44px";
+      d = cx - (g.x0 + g.r);
+    } else if (pl.side === "left") {
+      seg.style.top = ry + "px"; seg.style.height = pr.height + "px"; seg.style.left = "2px"; seg.style.width = "44px";
+      d = g.Lb + g.arc + g.Lv + g.arc + g.Lb + g.arc + (cy - (g.y0 + g.r));
+    } else {
+      seg.style.top = ry + "px"; seg.style.height = pr.height + "px"; seg.style.left = (scene.clientWidth - 46) + "px"; seg.style.width = "44px";
+      d = g.Lb + g.arc + ((g.y1 - g.r) - cy);
+    }
+    var t = { d: d, plot: pl };
+    seg.onclick = function () { goToTarget(t); };
+    box.appendChild(seg); carState.targets.push(t);
+  });
+  carState.total = g.total;
+  drawCar(g, carState.d, 1);
+}
 (function init() {
-  var top = document.getElementById("plotsTop"), bot = document.getElementById("plotsBot"), shr = document.getElementById("plotsShared");
-  for (var i = 0; i < 3; i++) top.appendChild(makePlot("H", "Ô đất trống 🏠\nbấm để xếp nhà"));
-  for (var j = 0; j < 3; j++) bot.appendChild(makePlot("H", "Ô đất trống 🏠\nbấm để xếp nhà"));
-  for (var k = 0; k < 4; k++) shr.appendChild(makePlot("S", "Ô khu dùng chung 🏛️"));
+  var block = document.getElementById("block");
+  function addPlot(kind, label, side, pos) {
+    var p = makePlot(kind, label);
+    p.dataset.posName = pos;
+    block.appendChild(p);
+    PLOTS.push({ el: p, side: side, kind: kind,
+      label: function () { return this.el.dataset.itemName ? this.el.dataset.itemName : ("ô trống — " + this.el.dataset.posName); } });
+  }
+  for (var i = 0; i < 4; i++) addPlot("H", "Ô đất trống 🏠\nbấm để xếp nhà", "top", "ô nhà hàng trên số " + (i + 1));
+  addPlot("H", "Ô đất trống 🏠\nbấm để xếp nhà", "left", "ô nhà bên trái");
+  var center = document.createElement("div"); center.style.gridColumn = "span 2"; block.appendChild(center);
+  addPlot("H", "Ô đất trống 🏠\nbấm để xếp nhà", "right", "ô nhà bên phải");
+  for (var j = 0; j < 4; j++) addPlot("S", "Ô khu dùng chung 🏛️", "bottom", "ô dùng chung số " + (j + 1));
   var sh = document.getElementById("shelfHouse"), ss = document.getElementById("shelfShared");
   HOUSES.forEach(function (h, i) { sh.appendChild(makeCard(h, "H", i)); });
   SHARED.forEach(function (s, i) { ss.appendChild(makeCard(s, "S", i)); });
   refresh();
+  requestAnimationFrame(function () { buildSegs(); });
+  window.addEventListener("resize", buildSegs);
 })();
 </script>
 </body>
