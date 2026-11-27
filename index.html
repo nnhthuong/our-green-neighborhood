@@ -16,8 +16,8 @@
   #goal { padding: 8px 18px; background: #fff7dd; border-bottom: 2px solid #e3cf8a; font-size: 15px; }
   #wrap { display: flex; gap: 14px; padding: 14px 18px; align-items: flex-start; }
   #scene { flex: 1 1 62%; background: #ffffff; border: 3px solid #2e7d52; border-radius: 26px; padding: 56px; position: relative; overflow: hidden; }
-  .ring { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
-  .dashring { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
+  .ring { position: absolute; inset: 0; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
+  .dashring { position: absolute; inset: 17px; border: 3px dashed #ffd94d; border-radius: 25px; pointer-events: none; }
   #conns { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .connV { position: absolute; top: 0; bottom: 0; width: 48px; background: #5b6670; }
   .connV::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 3px dashed #ffd94d; }
@@ -268,8 +268,8 @@ function measureStreets() {
   STREET.iL = b.l + 26; STREET.iR = b.r - 26; STREET.iT = b.t + 26; STREET.iB = b.b - 26;
   var scene = document.getElementById("scene");
   STREET.W = scene.clientWidth; STREET.H = scene.clientHeight;
-  var r = 26;
-  var g = { x0: 21, y0: 21, x1: STREET.W - 21, y1: STREET.H - 21, r: r };
+  var r = 25;
+  var g = { x0: 17, y0: 17, x1: STREET.W - 17, y1: STREET.H - 17, r: r };
   g.Lb = (g.x1 - r) - (g.x0 + r); g.Lv = (g.y1 - r) - (g.y0 + r); g.arc = Math.PI * r / 2;
   g.total = 2 * (g.Lb + g.Lv) + 4 * g.arc;
   STREET.ring = g;
