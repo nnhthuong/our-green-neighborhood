@@ -261,6 +261,7 @@ function measureStreets() {
   for (var j = 0; j < 2; j++) STREET.hy.push(rectInScene(streetCells[(2 * j + 1) + ",0"]).cy);
   var b = rectInScene(document.getElementById("block"));
   STREET.L = b.l; STREET.R = b.r; STREET.T = b.t; STREET.B = b.b;
+  STREET.iL = b.l + 26; STREET.iR = b.r - 26; STREET.iT = b.t + 26; STREET.iB = b.b - 26;
   var scene = document.getElementById("scene");
   STREET.W = scene.clientWidth; STREET.H = scene.clientHeight;
 }
@@ -271,13 +272,13 @@ function buildGraph(extra) {
   function link(a, b) { if (a !== b && adj[a].indexOf(b) < 0) { adj[a].push(b); adj[b].push(a); } }
   var lines = [];
   STREET.vx.forEach(function (x) {
-    var ys = [STREET.T, STREET.hy[0], STREET.hy[1], STREET.B];
+    var ys = [STREET.iT, STREET.hy[0], STREET.hy[1], STREET.iB];
     extra.forEach(function (p) { if (Math.abs(p.x - x) < 2) ys.push(p.y); });
     ys.sort(function (a, b) { return a - b; });
     lines.push(ys.map(function (y) { return node(x, y); }));
   });
   STREET.hy.forEach(function (y) {
-    var xs = [STREET.L, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.R];
+    var xs = [STREET.iL, STREET.vx[0], STREET.vx[1], STREET.vx[2], STREET.iR];
     extra.forEach(function (p) { if (Math.abs(p.y - y) < 2) xs.push(p.x); });
     xs.sort(function (a, b) { return a - b; });
     lines.push(xs.map(function (x) { return node(x, y); }));
@@ -367,7 +368,7 @@ function stepDrive(dir) {
 }
 function tourCar() {
   if (st.carRun) return;
-  var vx = STREET.vx, hy = STREET.hy, L = STREET.L, R = STREET.R, T = STREET.T, B = STREET.B;
+  var vx = STREET.vx, hy = STREET.hy, L = STREET.iL, R = STREET.iR, T = STREET.iT, B = STREET.iB;
   var W = [
     { x: vx[0], y: T }, { x: vx[0], y: B }, { x: vx[2], y: B }, { x: vx[2], y: T },
     { x: vx[1], y: T }, { x: vx[1], y: B }, { x: R, y: hy[0] }, { x: L, y: hy[0] },
@@ -412,7 +413,7 @@ function buildSegs() {
     seg.onclick = function () { goToPlot(pl); };
     box.appendChild(seg);
   });
-  if (!carState.pos) carState.pos = { x: STREET.vx[0], y: STREET.B };
+  if (!carState.pos) carState.pos = { x: STREET.vx[0], y: STREET.iB };
   drawCarAt(carState.pos, 0);
 }
 (function init() {
