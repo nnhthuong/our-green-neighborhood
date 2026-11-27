@@ -20,6 +20,11 @@
   .dashring { position: absolute; inset: 81px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
   .ring2 { position: absolute; inset: 4px; border: 34px solid #5b6670; border-radius: 42px; pointer-events: none; }
   .dashring2 { position: absolute; inset: 21px; border: 3px dashed #ffd94d; border-radius: 26px; pointer-events: none; }
+  #conns { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .connV { position: absolute; top: 0; bottom: 0; width: 48px; background: #5b6670; }
+  .connV::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 3px dashed #ffd94d; }
+  .connH { position: absolute; left: 0; right: 0; height: 48px; background: #5b6670; }
+  .connH::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 3px dashed #ffd94d; }
   #block { display: grid; grid-template-columns: 1fr 48px 1fr 48px 1fr 48px 1fr; grid-template-rows: 1fr 48px 1fr 48px 1.5fr; height: 600px; position: relative; z-index: 1; }
   .streetV { background: #5b6670; position: relative; border-radius: 4px; }
   .streetV::before { content: ""; position: absolute; top: 4px; bottom: 4px; left: 50%; border-left: 3px dashed #ffd94d; }
@@ -95,6 +100,7 @@
     <div class="dashring2"></div>
     <div class="ring"></div>
     <div class="dashring"></div>
+    <div id="conns"></div>
     <div id="block"></div>
     <div id="segs"></div>
     <div id="car">🚗</div>
@@ -439,6 +445,18 @@ function tourCar() {
 }
 function buildSegs() {
   measureStreets();
+  var conns = document.getElementById("conns");
+  conns.innerHTML = "";
+  STREET.vx.forEach(function (x) {
+    var d = document.createElement("div"); d.className = "connV";
+    d.style.left = (x - 24) + "px";
+    conns.appendChild(d);
+  });
+  STREET.hy.forEach(function (y) {
+    var d = document.createElement("div"); d.className = "connH";
+    d.style.top = (y - 24) + "px";
+    conns.appendChild(d);
+  });
   var box = document.getElementById("segs");
   box.innerHTML = "";
   PLOTS.forEach(function (pl) {
